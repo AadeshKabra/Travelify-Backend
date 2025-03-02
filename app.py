@@ -3,6 +3,11 @@ from fastapi import FastAPI, requests
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 import uvicorn
+import json
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from fastapi.security import OAuth2PasswordBearer
+
 
 
 app = FastAPI()
@@ -20,6 +25,7 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"Hello": "World"}
+
 
 
 if __name__ == "__main__":
