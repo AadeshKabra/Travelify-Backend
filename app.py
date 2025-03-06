@@ -99,21 +99,10 @@ async def get_flights(payload: dict):
 
     search = GoogleSearch(params)
     results = search.get_dict()
-    # print(results)
-    # for item in results:
-    #     print(results[item])
 
     best_flights = results["best_flights"]
     other_flights = results["other_flights"]
-    # for flight in best_flights:
-        # print(flight)
-        # print("-------------")
-    # print(departure, arrival, date)
-    # print("=================================================================")
 
-    # for flight in other_flights:
-    #     print(flight)
-    #     print("-------------")
 
     return JSONResponse(content={
         "best_flights": best_flights,
