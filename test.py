@@ -1,19 +1,19 @@
-from serpapi import GoogleSearch
-
-params = {
-  "engine": "google_flights",
-  "departure_id": "PNQ",
-  "arrival_id": "BLR",
-  "outbound_date": "2025-03-08",
-  "currency": "INR",
-  "hl": "en",
-  "api_key": "4c877630ce1fd306bb061697b2df107b019479d69d93e2cdb60efca53cc8b8c5",
-  "type": "2"
-}
-# "hl": "en",
-search = GoogleSearch(params)
-results = search.get_dict()
-print(results)
+# from serpapi import GoogleSearch
+#
+# params = {
+#   "engine": "google_flights",
+#   "departure_id": "PNQ",
+#   "arrival_id": "BLR",
+#   "outbound_date": "2025-03-08",
+#   "currency": "INR",
+#   "hl": "en",
+#   "api_key": "4c877630ce1fd306bb061697b2df107b019479d69d93e2cdb60efca53cc8b8c5",
+#   "type": "2"
+# }
+# # "hl": "en",
+# search = GoogleSearch(params)
+# results = search.get_dict()
+# print(results)
 
 # "4c877630ce1fd306bb061697b2df107b019479d69d93e2cdb60efca53cc8b8c5"
 
@@ -78,3 +78,38 @@ print(results)
 # data = res.read()
 #
 # print(data.decode("utf-8"))
+
+
+from serpapi import GoogleSearch
+
+params = {
+  "engine": "google_hotels",
+  "q": "Udaipur",
+  "check_in_date": "2025-03-08",
+  "check_out_date": "2025-03-09",
+  "adults": "2",
+  "children": "2",
+  "children_ages": "17, 16",
+  "currency": "INR",
+  "gl": "in",
+  "hl": "en",
+  "api_key": "4c877630ce1fd306bb061697b2df107b019479d69d93e2cdb60efca53cc8b8c5"
+}
+
+search = GoogleSearch(params)
+results = search.get_dict()
+
+# print(results)
+for item in results:
+  print(item, "=>", results[item])
+  print("=======================================")
+
+# # Gemini API
+# from google import genai
+#
+# client = genai.Client(api_key="AIzaSyAESc9mcLzcwfLcSoUHrMv28tNGfWnIbac")
+# response = client.models.generate_content(
+#   model="gemini-2.0-flash", contents="Generate a two daya travel iternary for Udaipur"
+# )
+#
+# print(response.text)

@@ -10,7 +10,7 @@ from google.auth.transport.requests import Request
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
 from serpapi import GoogleSearch
-
+from google import genai
 
 
 app = FastAPI()
@@ -109,6 +109,57 @@ async def get_flights(payload: dict):
         "other_flights": other_flights,
         "status": "success"
     })
+
+
+@app.post("/searchHotels")
+async def search_hotels(payload: dict):
+    # print(payload)
+    destination = payload["destination"]
+    checkin = payload["checkinDate"]
+    checkout = payload["checkoutDate"]
+    adults = payload["adults"]
+    children = payload["children"]
+
+    params = {
+        "engine": "google_hotels",
+        "q": destination,
+        "check_in_date": checkin,
+        "check_out_date": checkout,
+        "adults": adults,
+        "children": children,
+        "currency": "INR",
+        "gl": "in",
+        "hl": "en",
+        "api_key": FLIGHT_SEARCH_API_KEY
+    }
+    # print(params)
+    children_ages = ""
+    for i in range(int(children)-1):
+        children_ages += "17, "
+    children_ages += "17"
+
+    print(children_ages)
+    params["children_ages"] = children_ages
+
+    search = GoogleSearch(params)
+    results = search.get_dict()
+
+    # print(results)
+    for item in results:
+        print(item, "=>", results[item])
+        print("=======================================")
+
+    # return JSONResponse(content={"message": "received"})
+    return JSONResponse(content=results)
+
+
+@app.post("/submitIternary")
+async def submit_iternary(payload: dict):
+    data = payload["params"]
+
+    return Response(content="iternary received in backend", media_type="text/plain")
+
+
 
 
 if __name__ == "__main__":
