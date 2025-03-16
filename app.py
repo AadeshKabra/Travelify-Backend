@@ -130,27 +130,71 @@ async def search_hotels(payload: dict):
         "currency": "INR",
         "gl": "in",
         "hl": "en",
-        "api_key": FLIGHT_SEARCH_API_KEY
+        "api_key": FLIGHT_SEARCH_API_KEY,
+        "num": 20
     }
     # print(params)
     children_ages = ""
-    for i in range(int(children)-1):
-        children_ages += "17, "
-    children_ages += "17"
+    if children!='':
+        for i in range(int(children)-1):
+            children_ages += "17, "
+        children_ages += "17"
 
-    print(children_ages)
+    # print(children_ages)
     params["children_ages"] = children_ages
 
     search = GoogleSearch(params)
     results = search.get_dict()
 
     # print(results)
-    for item in results:
-        print(item, "=>", results[item])
-        print("=======================================")
+    # for item in results:
+    #     print(item, "=>", results[item])
+    #     print("=======================================")
 
     # return JSONResponse(content={"message": "received"})
     return JSONResponse(content=results)
+
+
+@app.post("/getHotelInformation")
+async def get_hotel_information(data: dict):
+    payload = data["payload"]
+    property_token = data["property_token"]
+    name = data["name"]
+    # print(payload, property_token)
+
+    params = {
+        "engine": "google_hotels",
+        "q": name,
+        "check_in_date": payload["checkinDate"],
+        "check_out_date": payload["checkoutDate"],
+        "adults": payload["adults"],
+        "children": payload["children"],
+        "currency": "INR",
+        "property_token": property_token,
+        "api_key": FLIGHT_SEARCH_API_KEY
+    }
+
+    search = GoogleSearch(params)
+    results = search.get_dict()
+    # print(results)
+    for item in results:
+        print(item)
+
+
+    image_params = {
+        "q": name,
+        "engine": "google_images",
+        "ijn": "0",
+        "api_key": FLIGHT_SEARCH_API_KEY
+    }
+    images_search = GoogleSearch(image_params)
+    images_results = images_search.get_dict()["images_results"]
+    # images_results = results["images_results"]
+    response = {
+        "hotel_information": results,
+        "hotel_images": images_results
+    }
+    return JSONResponse(content=response)
 
 
 @app.post("/submitIternary")
