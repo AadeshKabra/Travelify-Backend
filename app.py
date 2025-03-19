@@ -11,6 +11,63 @@ from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
 from serpapi import GoogleSearch
 from google import genai
+from datetime import datetime, timedelta
+
+
+def get_hotels(destination, checkin, checkout, adults, children, min_price, max_price):
+    params = {
+        "engine": "google_hotels",
+        "q": destination,
+        "check_in_date": checkin,
+        "check_out_date": checkout,
+        "adults": adults,
+        "children": children,
+        "min_price": min_price,
+        "max_price": max_price,
+        "currency": "INR",
+        "gl": "in",
+        "hl": "en",
+        "api_key": FLIGHT_SEARCH_API_KEY,
+        "num": 10,
+        "sort_by": 3
+    }
+    # print(params)
+    children_ages = ""
+    if children != '':
+        for i in range(int(children) - 1):
+            children_ages += "17, "
+        children_ages += "17"
+
+    # print(children_ages)
+    params["children_ages"] = children_ages
+
+    search = GoogleSearch(params)
+    results = search.get_dict()
+
+    return results
+
+
+def get_gemini_response(destination, checkin, checkout, adults, children, min_price, max_price, interests, description, hotels):
+    prompt = f"""
+    Consider yourself as an automated travel itinerary planner which helps in planning travels for a user. Give just the itinerary in the response.
+    I have few details for your references to generate the itinerary. 
+    Destination: {destination}
+    Checkin Date: {checkin}
+    Checkout Date: {checkout}
+    Min. Budget for the trip: {min_price}
+    Max. Budget for the trip: {max_price}
+    There are {adults} adults and {children} children who would be travelling.
+    You can plan itinerary based on list of user-interests as follows: {interests}. Make sure to use this interests to plan the itinerary.
+    Below is the list of hotels fetched according to the user's budget: {hotels}.
+    There is also some additional description for the trip as follows:
+    {description}
+    You can use these hotels to plan the stay.
+    Give me a complete day-wise splitted travel itinerary.
+    """
+
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+    return response.text
 
 
 app = FastAPI()
@@ -31,6 +88,7 @@ TOKEN_FILE_PATH = os.getenv("TOKEN_FILE_PATH")
 CLIENT_SECRET_FILE = os.getenv("CLIENT_SECRET_FILE")
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 FLIGHT_SEARCH_API_KEY = os.getenv("FLIGHT_SEARCH_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 with open(CLIENT_SECRET_FILE, "r") as f:
@@ -120,38 +178,8 @@ async def search_hotels(payload: dict):
     adults = payload["adults"]
     children = payload["children"]
 
-    params = {
-        "engine": "google_hotels",
-        "q": destination,
-        "check_in_date": checkin,
-        "check_out_date": checkout,
-        "adults": adults,
-        "children": children,
-        "currency": "INR",
-        "gl": "in",
-        "hl": "en",
-        "api_key": FLIGHT_SEARCH_API_KEY,
-        "num": 20
-    }
-    # print(params)
-    children_ages = ""
-    if children!='':
-        for i in range(int(children)-1):
-            children_ages += "17, "
-        children_ages += "17"
+    results = get_hotels(destination, checkin, checkout, adults, children)
 
-    # print(children_ages)
-    params["children_ages"] = children_ages
-
-    search = GoogleSearch(params)
-    results = search.get_dict()
-
-    # print(results)
-    # for item in results:
-    #     print(item, "=>", results[item])
-    #     print("=======================================")
-
-    # return JSONResponse(content={"message": "received"})
     return JSONResponse(content=results)
 
 
@@ -200,10 +228,66 @@ async def get_hotel_information(data: dict):
 @app.post("/submitIternary")
 async def submit_iternary(payload: dict):
     data = payload["params"]
+    # print(data)
+    destination = data["destination"]
+    checkin = data["date"]
+    adults = data["adults"]
+    children = data["children"]
+    checkout = (datetime.strptime(checkin, "%Y-%m-%d") + timedelta(days=int(data["days"]))).strftime("%Y-%m-%d")
+    min_price = int(data["minBudget"])
+    max_price = int(data["maxBudget"])
+    interests = data["interests"]
+    description = data["description"]
 
-    return Response(content="iternary received in backend", media_type="text/plain")
+    weights = {
+        "Luxury": {"Hotel": 0.45, "Transport": 0.25, "Food": 0.20, "Activities": 0.5, "Misc": 0.5},
+        "Adventure": {"Hotel": 0.30, "Transport": 0.30, "Food": 0.15, "Activities": 0.20, "Misc": 0.5},
+        "Backpacking": {"Hotel": 0.20, "Transport": 0.40, "Food": 0.15, "Activities": 0.20, "Misc": 0.5},
+        "Spiritual": {"Hotel": 0.30, "Transport": 0.30, "Food": 0.15, "Activities": 0.20, "Misc": 0.5},
+        "Business": {"Hotel": 0.30, "Transport": 0.30, "Food": 0.20, "Activities": 0.15, "Misc": 0.5},
+        "Romantic": {"Hotel": 0.25, "Transport": 0.25, "Food": 0.20, "Activities": 0.25, "Misc": 0.5},
+        "Cultural": {"Hotel": 0.25, "Transport": 0.20, "Food": 0.20, "Activities": 0.20, "Misc": 0.15}
+    }
+
+    if len(interests)==0:
+        hotel_weights = 0.25
+        transport_weights = 0.20
+        food_weights = 0.20
+        activities_weights = 0.20
+        misc = 0.15
+
+        min_hotel_price = int(int(hotel_weights * min_price)/int(data["days"]))
+        max_hotel_price = int(int(hotel_weights * max_price)/int(data["days"]))
+        print("Min: ", min_hotel_price)
+        print("Max: ", max_hotel_price)
+        hotel_results = get_hotels(destination, checkin, checkout, adults, children, min_hotel_price, max_hotel_price)
+    else:
+        hotel_weights = 0
+        for interest in interests:
+            hotel_weights += weights[interest]["Hotel"]
+
+        hotel_weights = float(hotel_weights / len(interests))
+        min_hotel_price = int(int(hotel_weights * min_price)/int(data["days"]))
+        max_hotel_price = int(int(hotel_weights * max_price)/int(data["days"]))
+        print("Min: ", min_hotel_price)
+        print("Max: ", max_hotel_price)
+        hotel_results = get_hotels(destination, checkin, checkout, adults, children, min_hotel_price, max_hotel_price)
 
 
+    # print(hotel_results)
+    # print("==================================================")
+    hotels = []
+    for hotel in hotel_results["properties"]:
+        # print(hotel)
+        hotels.append({"Hotel Name": hotel["name"], "Hotel Price": hotel["rate_per_night"]["lowest"]})
+        # print("-----------------------------------------------")
+
+    # results = get_hotels(destination, checkin, checkout, adults, children, min_price, max_price)
+    # print(results)
+    result = get_gemini_response(destination, checkin, checkout, adults, children, min_price, max_price, interests, description, hotels)
+    results = {"result": result}
+
+    return JSONResponse(content=results)
 
 
 if __name__ == "__main__":
