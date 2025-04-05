@@ -1,5 +1,7 @@
+import asyncio
+import io
 import os
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, JSONResponse
 import uvicorn
@@ -12,6 +14,9 @@ from dotenv import load_dotenv
 from serpapi import GoogleSearch
 from google import genai
 from datetime import datetime, timedelta
+import PIL.Image
+from PIL import Image
+import spacy
 
 
 def get_hotels(destination, checkin, checkout, adults, children, min_price, max_price):
@@ -70,6 +75,12 @@ def get_gemini_response(destination, checkin, checkout, adults, children, min_pr
     return response.text
 
 
+def extract_location(text):
+    doc = nlp(text)
+    locations = [ent.text for ent in doc.ents if ent.label_ in ["GPE", "LOC"]]
+    return locations[0] if locations else "Location not found"
+
+
 app = FastAPI()
 
 origins = ["*"]
@@ -97,6 +108,8 @@ with open(CLIENT_SECRET_FILE, "r") as f:
     GOOGLE_CLIENT_SECRET = data["installed"]["client_secret"]
     GOOGLE_REDIRECT_URI = data["installed"]["redirect_uris"][0] + ":8000/auth/google"
 
+
+nlp = spacy.load("en_core_web_sm")
 
 @app.get("/")
 async def root():
@@ -286,6 +299,34 @@ async def submit_iternary(payload: dict):
     # print(results)
     result = get_gemini_response(destination, checkin, checkout, adults, children, min_price, max_price, interests, description, hotels)
     results = {"result": result}
+
+    return JSONResponse(content=results)
+
+
+@app.post("/picture2Place")
+async def picture_2_place(image: UploadFile = File(...)):
+    contents = await image.read()
+    image_stream = io.BytesIO(contents)
+    img = Image.open(image_stream)
+    print(f"Received image: {image.filename}, Type: {image.content_type}")
+
+    img_byte_array = io.BytesIO()
+    img.save(img_byte_array, format=img.format)
+    img_bytes = img_byte_array.getvalue()
+
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    # response = client.models.generate_content(model="gemini-2.0-flash", contents=["Can you identify and describe the location of this image?", img])
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(None, lambda: client.models.generate_content(
+        model = "gemini-2.0-flash",
+        contents = ["Can you identify and describe the location of this image?", img]
+    ))
+
+    result_text = response.text if hasattr(response, "text") else "No response received"
+    location = extract_location(result_text)
+    print(response.text)
+    print(location)
+    results = {"result": result_text, "Location": location}
 
     return JSONResponse(content=results)
 
