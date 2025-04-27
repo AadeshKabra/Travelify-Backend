@@ -100,13 +100,23 @@ CLIENT_SECRET_FILE = os.getenv("CLIENT_SECRET_FILE")
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 FLIGHT_SEARCH_API_KEY = os.getenv("FLIGHT_SEARCH_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GOOGLE_API_DATA = json.loads(os.getenv("GOOGLE_API_DATA"))
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-with open(CLIENT_SECRET_FILE, "r") as f:
-    data = json.load(f)
-    GOOGLE_CLIENT_ID = data["installed"]["client_id"]
-    GOOGLE_CLIENT_SECRET = data["installed"]["client_secret"]
-    GOOGLE_REDIRECT_URI = data["installed"]["redirect_uris"][0] + ":8000/auth/google"
+
+# print(GOOGLE_API_DATA)
+# print(type(GOOGLE_API_DATA))
+# print(GOOGLE_CLIENT_ID)
+
+GOOGLE_CLIENT_ID = GOOGLE_API_DATA["installed"]["client_id"]
+GOOGLE_CLIENT_SECRET = GOOGLE_API_DATA["installed"]["client_secret"]
+GOOGLE_REDIRECT_URI = GOOGLE_API_DATA["installed"]["redirect_uris"][0] + ":8000/auth/google"
+
+# with open(CLIENT_SECRET_FILE, "r") as f:
+#     data = json.load(f)
+#     GOOGLE_CLIENT_ID = data["installed"]["client_id"]
+#     GOOGLE_CLIENT_SECRET = data["installed"]["client_secret"]
+#     GOOGLE_REDIRECT_URI = data["installed"]["redirect_uris"][0] + ":8000/auth/google"
 
 
 nlp = spacy.load("en_core_web_sm")
