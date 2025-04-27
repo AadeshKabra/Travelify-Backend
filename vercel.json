@@ -1,19 +1,14 @@
 {
-  "builds": [
-    {
-      "src": "app.py",
-      "use": "@vercel/python"
+  "functions": {
+    "app.py": {
+      "runtime": "@vercel/python",
+      "excludeFiles": "**/*.json"
     }
-  ],
+  },
   "routes": [
     {
       "src": "/(.*)",
       "dest": "app.py"
     }
-  ],
-  "functions": {
-    "app.py": {
-      "excludeFiles": "**/*.json"
-    }
-  }
+  ]
 }
