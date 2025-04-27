@@ -191,7 +191,24 @@ async def search_hotels(payload: dict):
     adults = payload["adults"]
     children = payload["children"]
 
-    results = get_hotels(destination, checkin, checkout, adults, children)
+    # results = get_hotels(destination, checkin, checkout, adults, children)
+    params = {
+        "engine": "google_hotels",
+        "q": destination,
+        "check_in_date": checkin,
+        "check_out_date": checkout,
+        "adults": adults,
+        "children": children,
+        "currency": "INR",
+        "gl": "in",
+        "hl": "en",
+        "api_key": FLIGHT_SEARCH_API_KEY,
+        "num": 10,
+        "sort_by": 3
+    }
+
+    search = GoogleSearch(params)
+    results = search.get_dict()
 
     return JSONResponse(content=results)
 
