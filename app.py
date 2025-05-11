@@ -52,6 +52,33 @@ def get_hotels(destination, checkin, checkout, adults, children, min_price, max_
     return results
 
 
+def get_weather(destination, checkin, checkout):
+    # params = {
+    #     "engine": "google",
+    #     "q": f"Weather forecast for {destination} between dates: {checkin} and {checkout}",
+    #     "api_key": FLIGHT_SEARCH_API_KEY
+    # }
+    #
+    # response = requests.get("https://serpapi.com/search", params=params)
+    # # search = GoogleSearch(params)
+    # data = response.json()
+    # # results = search.get_dict()
+    # return data
+
+    # base_url = "http://api.openweathermap.org/data/2.5/weather?"
+    forecast_url = "http://api.openweathermap.org/data/2.5/forecast"
+    api_key = ""
+    # complete_url = base_url + "appid=" + api_key + "&q=" + destination
+    params = {
+        "q": destination,
+        "appid": api_key,
+        "units": "metric"  # For temperature in Celsius
+    }
+    response = requests.get(forecast_url, params=params)
+    # response = requests.get(complete_url)
+    return response
+
+
 def get_gemini_response(destination, checkin, checkout, adults, children, min_price, max_price, interests, description, hotels):
     prompt = f"""
     Consider yourself as an automated travel itinerary planner which helps in planning travels for a user. Give just the itinerary in the response.
@@ -63,7 +90,7 @@ def get_gemini_response(destination, checkin, checkout, adults, children, min_pr
     Max. Budget for the trip: {max_price}
     There are {adults} adults and {children} children who would be travelling.
     You can plan itinerary based on list of user-interests as follows: {interests}. Make sure to use this interests to plan the itinerary.
-    Below is the list of hotels fetched according to the user's budget: {hotels}.
+    Below is the list of hotels fetched according to the user's budget: {hotels}. Choose the hotel which is within the budget with the best rating.
     There is also some additional description for the trip as follows:
     {description}
     You can use these hotels to plan the stay.
@@ -110,8 +137,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 GOOGLE_CLIENT_ID = GOOGLE_API_DATA["installed"]["client_id"]
 GOOGLE_CLIENT_SECRET = GOOGLE_API_DATA["installed"]["client_secret"]
-GOOGLE_REDIRECT_URI = GOOGLE_API_DATA["installed"]["redirect_uris"][0] + ":8000/auth/google"
-
+# GOOGLE_REDIRECT_URI = GOOGLE_API_DATA["installed"]["redirect_uris"][0] + ":8000/auth/google"
+GOOGLE_REDIRECT_URI = "https://travelify-backend.onrender.com/auth/google"
 # with open(CLIENT_SECRET_FILE, "r") as f:
 #     data = json.load(f)
 #     GOOGLE_CLIENT_ID = data["installed"]["client_id"]
@@ -158,6 +185,7 @@ async def auth_google(code: str):
     return RedirectResponse(url=frontend_redirect_url)
 
 
+# Flights
 @app.post("/getFlights")
 async def get_flights(payload: dict):
     data = payload["params"]
@@ -192,6 +220,7 @@ async def get_flights(payload: dict):
     })
 
 
+# Hotels
 @app.post("/searchHotels")
 async def search_hotels(payload: dict):
     # print(payload)
@@ -265,6 +294,7 @@ async def get_hotel_information(data: dict):
     return JSONResponse(content=response)
 
 
+# Travel Itinerary
 @app.post("/submitIternary")
 async def submit_iternary(payload: dict):
     data = payload["params"]
@@ -324,6 +354,11 @@ async def submit_iternary(payload: dict):
 
     # results = get_hotels(destination, checkin, checkout, adults, children, min_price, max_price)
     # print(results)
+
+    # print(destination, checkin, checkout)
+    # weather = get_weather(destination, checkin, checkout)
+    # print(weather.json())
+
     result = get_gemini_response(destination, checkin, checkout, adults, children, min_price, max_price, interests, description, hotels)
     results = {"result": result}
 
