@@ -137,8 +137,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 GOOGLE_CLIENT_ID = GOOGLE_API_DATA["installed"]["client_id"]
 GOOGLE_CLIENT_SECRET = GOOGLE_API_DATA["installed"]["client_secret"]
-# GOOGLE_REDIRECT_URI = GOOGLE_API_DATA["installed"]["redirect_uris"][0] + ":8000/auth/google"
-GOOGLE_REDIRECT_URI = "https://travelify-backend.onrender.com/auth/google"
+GOOGLE_REDIRECT_URI = GOOGLE_API_DATA["installed"]["redirect_uris"][0] + ":8000/auth/google"
+# GOOGLE_REDIRECT_URI = "https://travelify-backend.onrender.com/auth/google"
 # with open(CLIENT_SECRET_FILE, "r") as f:
 #     data = json.load(f)
 #     GOOGLE_CLIENT_ID = data["installed"]["client_id"]
